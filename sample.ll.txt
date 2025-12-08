@@ -1,0 +1,29 @@
+
+Operations:
+¯\_(ツ)_/¯  equals
+('_')┏oo┓('_') plus
+(ㆆ _ ㆆ)   minus
+
+
+(>^o^)><(^o^<)  opening and closing brackets
+Input:
+( ━☞´◔‿ゝ◔`)━☞ (>^o^)>inputs<(^o^<)
+
+Output:
+╾━╤デ╦︻(▀̿Ĺ̯▀̿ ̿) (>^o^)>outputs<(^o^<)
+
+While Loops:
+¯\_( ͡° ͜ʖ ͡°)_/¯ (>^o^)>condition to check for<(^o^<) (｡☉౪ ⊙｡) body to execute (>^o^)><(^o^<)
+
+
+If statements:
+( ͡° ͜ʖ ͡°) If
+( ͡~ ͜ʖ ͡°) else if
+ಠ_ಠ else
+
+Declaring variables: 
+╰( ⁰ ਊ ⁰ )━☆ﾟ.*･｡ﾟ (>^o^)>variable to declare<(^o^<)
+
+Array:
+┬──┬ ノ( ゜-゜ノ) (>^o^)>length of array<(^o^<)  initializes an array of that length
+(ノಠ益ಠ)ノ彡┻━┻ (>^o^)>index to change<(^o^<) (>^o^)>element to change to<(^o^<)    remove from index
