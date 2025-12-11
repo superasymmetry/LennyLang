@@ -11,6 +11,7 @@
 using namespace std;
 using std::function;
 using std::shared_ptr;
+using Value = std::variant<int, double, std::string>;
 
 static string load(const string &path) {
     // given a file path, loads the entire file into a string
@@ -126,22 +127,13 @@ bool is_less(string a, string b) {
     exit(1);
 }
 
-// variable assignments
-struct Value {
-    using array_t = std::vector<std::unique_ptr<Value>>;
-    using var_t = std::variant<std::monostate, int, double, std::string, array_t>;
-    var_t v;
-
-    Value() = default;
-    template<typename T> Value(T&& x) : v(std::forward<T>(x)) {}
-};
-
 static std::map<std::string, Value> globals;
 
 void assign(string a, string b) {
     globals[a] = Value(b);
 }
 
+// for debugging
 void PrintStack(stack<string> s)
 {
     // used for debugging
@@ -153,6 +145,21 @@ void PrintStack(stack<string> s)
     PrintStack(s);
     cout << x << " ";
     s.push(x);
+}
+
+void PrintMap(map<string, Value> m)
+{
+    for (const auto& pair : m) {
+        cout << pair.first << ": ";
+        if (std::holds_alternative<int>(pair.second)) {
+            cout << std::get<int>(pair.second);
+        } else if (std::holds_alternative<double>(pair.second)) {
+            cout << std::get<double>(pair.second);
+        } else if (std::holds_alternative<std::string>(pair.second)) {
+            cout << std::get<std::string>(pair.second);
+        }
+        cout << endl;
+    }
 }
 
 int main(int argc, char **argv) {
@@ -197,6 +204,8 @@ int main(int argc, char **argv) {
     map<string, function<void()>> operations;
     stack<string> todo;
     vector<string> tokens = split(code);
+    map<string, Value> variables;
+    stack<string> toassign;
     // print initial stack
     // cout << "Initial todo" << endl;
     // PrintStack(todo);
@@ -217,14 +226,26 @@ int main(int argc, char **argv) {
             if (!todo.empty()) {
                 todo.pop();
             }
-        } else if (*it == "(`O`)") { //( ͡° ͜ʖ ͡°)
+        } else if (*it == "UwU") { //( ͡° ͜ʖ ͡°)
             if (todo.empty()) {
-                cerr << "Error: Stack underflow on '( ͡° ͜ʖ ͡°)'" << endl;
+                cerr << "Error: Stack underflow on UwU" << endl;
                 return 1;
             }
-            output(todo.top());
+            string val = todo.top();
             todo.pop();
-        } else if (*it == "('_')++('_')") { //('_')┏oo┓('_')
+            if(variables.find(val) != variables.end()){
+                Value v = variables[val];
+                if(std::holds_alternative<int>(v)){
+                    output(std::to_string(std::get<int>(v)));
+                } else if(std::holds_alternative<double>(v)){
+                    output(std::to_string(std::get<double>(v)));
+                } else if(std::holds_alternative<std::string>(v)){
+                    output(std::get<std::string>(v));
+                }
+            } else{
+                output(val);
+            }
+        } else if (*it == "+_+") { //('_')┏oo┓('_')
             // addition
             if (todo.size() < 2) {
                 cerr << "Error: Stack underflow on addition" << endl;
@@ -234,8 +255,39 @@ int main(int argc, char **argv) {
             string b = todo.top(); todo.pop();
             string result = add_two(a, b);
             todo.push(result);
+        } else if (*it == "-.-") {
+            if (todo.size() < 2) {
+                cerr << "Error: Stack underflow on (ㆆ _ ㆆ)" << endl;
+                return 1;
+            }
+            string a = todo.top(); todo.pop();
+            string b = todo.top(); todo.pop();
+            string result = subtract_two(b, a);
+            todo.push(result);
+        } else if (*it == ":[") {
+            // variable assignment
+            if (todo.size() < 1){
+                cerr << "Error: No variable specified for assignment" << endl;
+                return 1;
+            }
+            toassign.push(todo.top()); todo.pop();
         } else {
             todo.push(*it);
+            if (!toassign.empty()){
+                string name = toassign.top(); toassign.pop();
+                string valueStr = todo.top(); todo.pop();
+                if (is_number(valueStr)) variables[name] = stoi(valueStr);
+                else variables[name] = valueStr;
+            } else if (variables.find(*it) != variables.end()) {
+                Value val = variables[*it];
+                if (std::holds_alternative<int>(val)) {
+                    todo.push(std::to_string(std::get<int>(val)));
+                } else if (std::holds_alternative<double>(val)) {
+                    todo.push(std::to_string(std::get<double>(val)));
+                } else if (std::holds_alternative<std::string>(val)) {
+                    todo.push(std::get<std::string>(val));
+                }
+            }
         }
     }
 
