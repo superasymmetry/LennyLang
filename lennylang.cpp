@@ -13,9 +13,10 @@ using std::function;
 using std::shared_ptr;
 using Value = std::variant<int, double, std::string>;
 
+static std::map<std::string, Value> globals;
+
 struct LoopBody
 {
-    map<std::string, Value> variables;
     std::vector<std::string> condition;
     std::stack<std::string> stack;
     std::vector<std::variant<std::string, std::shared_ptr<LoopBody>>> body;
@@ -32,6 +33,41 @@ static string load(const string &path)
     }
     string s((istreambuf_iterator<char>(f)), istreambuf_iterator<char>());
     return s;
+}
+
+// for debugging
+void PrintStack(stack<string> s)
+{
+    // used for debugging
+    if (s.empty())
+        return;
+
+    string x = s.top();
+    s.pop();
+    PrintStack(s);
+    std::cout << x << " ";
+    s.push(x);
+}
+
+void PrintMap(map<string, Value> m)
+{
+    for (const auto &pair : m)
+    {
+        std::cout << pair.first << ": ";
+        if (std::holds_alternative<int>(pair.second))
+        {
+            std::cout << std::get<int>(pair.second);
+        }
+        else if (std::holds_alternative<double>(pair.second))
+        {
+            std::cout << std::get<double>(pair.second);
+        }
+        else if (std::holds_alternative<std::string>(pair.second))
+        {
+            std::cout << std::get<std::string>(pair.second);
+        }
+        std::cout << std::endl;
+    }
 }
 
 vector<string> split(const string &s)
@@ -76,34 +112,83 @@ bool is_number(const std::string &s)
     return !s.empty() && it == s.end();
 }
 
-// addition operation
-string add_two(string a, string b)
+string get_var(string name, map<string, Value> &variables)
 {
-    // if numbers
-    if (is_number(a) && is_number(b))
+    if (variables.find(name) != variables.end())
+    {
+        Value val = variables[name];
+        if (std::holds_alternative<int>(val))
+        {
+            return std::to_string(std::get<int>(val));
+        }
+        else if (std::holds_alternative<double>(val))
+        {
+            return std::to_string(std::get<double>(val));
+        }
+        else if (std::holds_alternative<std::string>(val))
+        {
+            return "~" + std::get<std::string>(val) + "~";
+        }
+    }
+    return name;
+}
+
+// addition operation
+string add_two(string a, string b, map<string, Value> &variables)
+{
+    // if there are variables, get them first
+    a = get_var(a, variables);
+    b = get_var(b, variables);
+    // strings will be surrounded by ~
+    if ((a.size() >= 2 && a[0] == '~' && a[a.size()-1] == '~') && (b.size() >=2 && b[0] == '~' && b[b.size()-1] == '~'))
+    {
+        string str_a = a.substr(1, a.size() - 2);
+        string str_b = b.substr(1, b.size() - 2);
+        return "~" + str_a + str_b + "~";
+    }
+    else if (is_number(a) && is_number(b))
     {
         int sum = stoi(a) + stoi(b);
         return to_string(sum);
-    }
-    return a + b;
+    } 
+    cerr << "Error: Addition requires both operands to be either numbers or strings." << endl;
+    exit(1);
+
 }
 
 // subtraction operation
-string subtract_two(string a, string b)
+string subtract_two(string a, string b, map<string, Value> &variables)
 {
-    if (is_number(a) && is_number(b))
+    a = get_var(a, variables);
+    b = get_var(b, variables);
+
+    if ((a.size() >= 2 && a[0] == '~' && a[a.size()-1] == '~') || (b.size() >=2 && b[0] == '~' && b[b.size()-1] == '~'))
+    {
+        cerr << "Error: Subtraction not defined for string operands." << endl;
+        exit(1);
+    }
+    else if (is_number(a) && is_number(b))
     {
         int diff = stoi(a) - stoi(b);
         return to_string(diff);
+    }else{
+        cerr << "Error: Subtraction requires numeric operands." << endl;
+        exit(1);
     }
-    cerr << "Error: Subtraction requires numeric operands." << endl;
-    exit(1);
 }
 
 // multiplication operation
-string multiply_two(string a, string b)
+string multiply_two(string a, string b, map<string, Value> &variables)
 {
-    if (is_number(a) && is_number(b))
+    a = get_var(a, variables);
+    b = get_var(b, variables);
+
+    if ((a.size() >= 2 && a[0] == '~' && a[a.size()-1] == '~') || (b.size() >=2 && b[0] == '~' && b[b.size()-1] == '~'))
+    {
+        cerr << "Error: Multiplication not defined for string operands." << endl;
+        exit(1);
+    }
+    else if (is_number(a) && is_number(b))
     {
         int prod = stoi(a) * stoi(b);
         return to_string(prod);
@@ -113,9 +198,16 @@ string multiply_two(string a, string b)
 }
 
 // division operation
-string divide_two(string a, string b)
+string divide_two(string a, string b, map<string, Value> &variables)
 {
-    if (is_number(a) && is_number(b))
+    a = get_var(a, variables);
+    b = get_var(b, variables);
+
+    if ((a.size() >= 2 && a[0] == '~' && a[a.size()-1] == '~') || (b.size() >=2 && b[0] == '~' && b[b.size()-1] == '~'))
+    {
+        cerr << "Error: Division not defined for string operands." << endl;
+        exit(1);
+    } else if (is_number(a) && is_number(b))
     {
         if (stoi(b) == 0)
         {
@@ -130,18 +222,41 @@ string divide_two(string a, string b)
 }
 
 // equality operation
-bool is_equal(string a, string b)
+bool is_equal(string a, string b, map<string, Value> &variables)
 {
-    if (is_number(a) && is_number(b))
-    {
-        return stoi(a) == stoi(b);
+    a = get_var(a, variables);
+    b = get_var(b, variables);
+    if ((a.size() >= 2 && a[0] == '~' && a[a.size()-1] == '~')){
+        a = a.substr(1, a.size() - 2);
+        if ((b.size() >= 2 && b[0] == '~' && b[b.size()-1] == '~')){
+            b = b.substr(1, b.size() - 2);
+            return a == b;
+        } else {
+            return false;
+        }
+    } else{
+        if (b.size() >= 2 && b[0] == '~' && b[b.size()-1] == '~'){
+            return false;
+        } else{
+            if (is_number(a) && is_number(b)){
+                return stoi(a) == stoi(b);
+            } else {
+                return a == b;
+            }
+        }
     }
-    return a == b;
 }
 
 // greater-than operation
-bool is_greater(string a, string b)
+bool is_greater(string a, string b, map<string, Value> &variables)
 {
+    a = get_var(a, variables);
+    b = get_var(b, variables);
+    if ((a.size() >= 2 && a[0] == '~' && a[a.size()-1] == '~') || (b.size() >=2 && b[0] == '~' && b[b.size()-1] == '~'))
+    {
+        cerr << "Error: Greater-than comparison not defined for string operands." << endl;
+        exit(1);
+    }
     if (is_number(a) && is_number(b))
     {
         return stoi(a) > stoi(b);
@@ -151,17 +266,24 @@ bool is_greater(string a, string b)
 }
 
 // less-than operation
-bool is_less(string a, string b)
+bool is_less(string a, string b, map<string, Value> &variables)
 {
-    if (is_number(a) && is_number(b))
+    a = get_var(a, variables);
+    b = get_var(b, variables);
+    if ((a.size() >= 2 && a[0] == '~' && a[a.size()-1] == '~') || (b.size() >=2 && b[0] == '~' && b[b.size()-1] == '~'))
     {
+        cerr << "Error: Less-than comparison not defined for string operands." << endl;
+        exit(1);
+    } else if (is_number(a) && is_number(b)) {
         return stoi(a) < stoi(b);
     }
+    cout << "Variables" << endl;
+    PrintMap(variables);
     cerr << "Error: Less-than comparison requires numeric operands." << endl;
     exit(1);
 }
 
-bool evaluate_cond(const std::vector<std::string> &condition)
+bool evaluate_cond(const std::vector<std::string> &condition, map<string, Value> &variables)
 {
     if (condition.size() != 3)
     {
@@ -172,65 +294,31 @@ bool evaluate_cond(const std::vector<std::string> &condition)
     string op = condition[1];
     string value = condition[2];
 
-    if (op == "==")
-    {
-        return is_equal(var, value);
-    }
-    else if (op == ">")
-    {
-        return is_greater(var, value);
-    }
-    else if (op == "<")
-    {
-        return is_less(var, value);
-    }
-    else
-    {
+    // cout << "Evaluate_cond variables" << endl;
+    // PrintMap(variables);
+    if (op == "=="){
+        return is_equal(var, value, variables);
+    }else if (op == ">"){
+        return is_greater(var, value, variables);
+    }else if (op == "<"){
+        return is_less(var, value, variables);
+    }else{
         cerr << "Error: Unknown operator in condition." << endl;
         exit(1);
     }
 }
 
-static std::map<std::string, Value> globals;
-
-void assign(string a, string b)
-{
-    globals[a] = Value(b);
-}
-
-// for debugging
-void PrintStack(stack<string> s)
-{
-    // used for debugging
-    if (s.empty())
-        return;
-
-    string x = s.top();
-    s.pop();
-    PrintStack(s);
-    std::cout << x << " ";
-    s.push(x);
-}
-
-void PrintMap(map<string, Value> m)
-{
-    for (const auto &pair : m)
-    {
-        std::cout << pair.first << ": ";
-        if (std::holds_alternative<int>(pair.second))
-        {
-            std::cout << std::get<int>(pair.second);
+void assign(string var, const string& value, map<string, Value>& variables){
+    if (variables.find(var) != variables.end()) {
+        if (value.size() >= 2 && value[0] == '~' && value[value.size()-1] == '~'){
+            variables[var] = value.substr(1, value.size() - 2);
+        } else if (is_number(value)){
+            variables[var] = stoi(value);
+        } else {
+            variables[var] = value;
         }
-        else if (std::holds_alternative<double>(pair.second))
-        {
-            std::cout << std::get<double>(pair.second);
-        }
-        else if (std::holds_alternative<std::string>(pair.second))
-        {
-            std::cout << std::get<std::string>(pair.second);
-        }
-        std::cout << std::endl;
     }
+
 }
 
 void run_code(
@@ -240,8 +328,6 @@ void run_code(
 {
 
     stack<string> toassign; // variable names yet to be assigned
-    std::stack<std::shared_ptr<LoopBody>> loop_stack;
-    bool in_loop = false;
     // cout << "Initial todo" << endl;
     // PrintStack(todo);
     // cout << endl;
@@ -264,53 +350,41 @@ void run_code(
         // cout << endl;
         if (holds_alternative<shared_ptr<LoopBody>>(*it)){
             auto loop = get<shared_ptr<LoopBody>>(*it);
-            while (evaluate_cond(loop->condition))
-            {
+            // cout << "Loop condition: " << loop->condition[0] << " " << loop->condition[1] << " " << loop->condition[2] << endl;
+            // cout << "loop variables: " << endl;
+            // PrintMap(variables); 
+            while (evaluate_cond(loop->condition, variables)){
                 run_code(loop->body, variables, todo); // Recursively execute loop body
             }
         }else if (holds_alternative<string>(*it)){
 
             // assign variables: open-bracket variable assignment-operator value close-bracket
-            if (holds_alternative<shared_ptr<LoopBody>>(*it))
-            {
+            if (holds_alternative<shared_ptr<LoopBody>>(*it)){
                 auto loop_body = get<shared_ptr<LoopBody>>(*it);
-                run_code(loop_body->body, loop_body->variables, loop_body->stack);
-            }
-            else if (holds_alternative<string>(*it) && get<string>(*it) == "(>^o^)>")
-            {
+                run_code(loop_body->body, variables, loop_body->stack);
+            }else if (holds_alternative<string>(*it) && get<string>(*it) == "(>^o^)>"){
                 if (!todo.empty())
                     todo.pop();
-            }
-            else if (holds_alternative<string>(*it) && get<string>(*it) == "(^o^<)")
-            { //(^o^<)
+            }else if (holds_alternative<string>(*it) && get<string>(*it) == "(^o^<)"){ //(^o^<)
                 // end process
                 if (!todo.empty())
                 {
                     todo.pop();
                 }
-            }
-            else if (holds_alternative<string>(*it) && get<string>(*it) == "UwU")
-            { //( ͡° ͜ʖ ͡°)
-                if (todo.empty())
-                {
+            }else if (holds_alternative<string>(*it) && get<string>(*it) == "UwU"){ //( ͡° ͜ʖ ͡°)
+                if (todo.empty()){
                     cerr << "Error: Stack underflow on UwU" << endl;
                     return;
                 }
                 string val = todo.top();
                 todo.pop();
-                if (variables.find(val) != variables.end())
-                {
+                if (variables.find(val) != variables.end()){
                     Value v = variables[val];
-                    if (std::holds_alternative<int>(v))
-                    {
+                    if (std::holds_alternative<int>(v)){
                         output(std::to_string(std::get<int>(v)));
-                    }
-                    else if (std::holds_alternative<double>(v))
-                    {
+                    }else if (std::holds_alternative<double>(v)){
                         output(std::to_string(std::get<double>(v)));
-                    }
-                    else if (std::holds_alternative<std::string>(v))
-                    {
+                    }else if (std::holds_alternative<std::string>(v)){
                         output(std::get<std::string>(v));
                     }
                 }
@@ -331,7 +405,7 @@ void run_code(
                 todo.pop();
                 string b = todo.top();
                 todo.pop();
-                string result = add_two(a, b);
+                string result = add_two(a, b, variables);
                 todo.push(result);
             }
             else if (holds_alternative<string>(*it) && get<string>(*it) == "-.-")
@@ -345,7 +419,7 @@ void run_code(
                 todo.pop();
                 string b = todo.top();
                 todo.pop();
-                string result = subtract_two(b, a);
+                string result = subtract_two(b, a, variables);
                 todo.push(result);
             }
             else if (holds_alternative<string>(*it) && get<string>(*it) == ":[")
@@ -359,92 +433,39 @@ void run_code(
                 toassign.push(todo.top());
                 todo.pop();
             }
-            else if (holds_alternative<string>(*it) && get<string>(*it) == "OwO")
-            {
-                // start to put things in loop
-                auto new_loop = std::make_shared<LoopBody>();
-                // parse the next tokens in brackets as the loop condition
-                auto cond_it = it + 1;
-                if (cond_it == tokens.end() || !holds_alternative<string>(*cond_it) || get<string>(*cond_it) != "(>^o^)>")
-                {
-                    cerr << "Error: Expected (>^o^)> to start loop condition after OwO" << endl;
-                    return;
-                }
-                ++cond_it; // move past (>^o^)>
-                std::vector<std::string> condition_tokens;
-                while (!(holds_alternative<string>(*cond_it) && get<string>(*cond_it) == "(^o^<)"))
-                {
-                    if (cond_it == tokens.end())
-                    {
-                        cerr << "Error: Expected (^o^<) to end loop condition" << endl;
-                        return;
-                    }
-                    condition_tokens.push_back(get<string>(*cond_it));
-                    ++cond_it;
-                }
-                // skip (^o^<)
-                ++cond_it;
-
-                new_loop->condition = condition_tokens;
-                it = cond_it;
-                loop_stack.push(new_loop);
-                in_loop = true;
-            }
-            else if (holds_alternative<string>(*it) && get<string>(*it) == ">:3")
-            {
-                // end loop
-                auto finished_loop = loop_stack.top();
-                loop_stack.pop();
-                if (!loop_stack.empty())
-                {
-                    loop_stack.top()->body.push_back(finished_loop);
-                    loop_stack.top()->condition = finished_loop->condition;
-                    loop_stack.top()->variables = finished_loop->variables;
-                    loop_stack.top()->stack = finished_loop->stack;
-                }
-                else
-                {
-                    in_loop = false;
-                    while (evaluate_cond(finished_loop->condition))
-                    {
-                        run_code(finished_loop->body, finished_loop->variables, finished_loop->stack);
-                    }
-                }
-            }
             else
             {
-                todo.push(get<string>(*it));
                 if (!toassign.empty())
                 {
                     string name = toassign.top();
                     toassign.pop();
-                    string valueStr = todo.top();
-                    todo.pop();
+                    string valueStr = get<string>(*it);
                     if (is_number(valueStr))
                         variables[name] = stoi(valueStr);
                     else
                         variables[name] = valueStr;
-                }
-                else if (variables.find(get<string>(*it)) != variables.end())
-                {
-                    Value val = variables[get<string>(*it)];
-                    if (std::holds_alternative<int>(val))
-                    {
-                        todo.push(std::to_string(std::get<int>(val)));
+                } else {                   
+                    todo.push(get<string>(*it));
+                    
+                    // Only do variable lookup if not followed by assignment operator
+                    if (!(it + 1 != tokens.end() && 
+                    holds_alternative<string>(*(it+1)) && 
+                    get<string>(*(it+1)) == ":[") &&  // check if next token is assignment operator
+                    variables.find(get<string>(*it)) != variables.end()) {
+                        Value val = variables[get<string>(*it)];
+                        if (std::holds_alternative<int>(val))
+                        {
+                            todo.push(std::to_string(std::get<int>(val)));
+                        }
+                        else if (std::holds_alternative<double>(val))
+                        {
+                            todo.push(std::to_string(std::get<double>(val)));
+                        }
+                        else if (std::holds_alternative<std::string>(val))
+                        {
+                            todo.push(std::get<std::string>(val));
+                        }
                     }
-                    else if (std::holds_alternative<double>(val))
-                    {
-                        todo.push(std::to_string(std::get<double>(val)));
-                    }
-                    else if (std::holds_alternative<std::string>(val))
-                    {
-                        todo.push(std::get<std::string>(val));
-                    }
-                }
-
-                if (in_loop)
-                {
-                    loop_stack.top()->stack.push(get<string>(*it));
                 }
             }
         }
@@ -576,18 +597,18 @@ int main(int argc, char **argv)
     LoopBody loop_body;
     // LoopBody code_body = parse_loop(loop_body, tokens, i, false, {});
     vector<variant<string, shared_ptr<LoopBody>>> code_body = parse_tokens(tokens, i);
-    for (const auto &t : code_body)
-    {
-        if (holds_alternative<shared_ptr<LoopBody>>(t))
-        {
-            cout << "Loop body" << endl;
-            PrintLoopBody(get<shared_ptr<LoopBody>>(t)->body);
-        }
-        else
-        {
-            cout << "Parsed token: " << get<string>(t) << endl;
-        }
-    }
+    // for debuggin: print loop body
+    // for (const auto &t : code_body)
+    // {
+    //     if (holds_alternative<shared_ptr<LoopBody>>(t))
+    //     {
+    //         cout << "Loop body" << endl;
+    //         PrintLoopBody(get<shared_ptr<LoopBody>>(t)->body);
+    //     }
+    //     else{
+    //         cout << "Parsed token: " << get<string>(t) << endl;
+    //     }
+    // }
     stack<string> todo;
     run_code(code_body, globals, todo);
 
