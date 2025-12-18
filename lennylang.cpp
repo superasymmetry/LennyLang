@@ -328,6 +328,7 @@ void run_code(
 {
 
     stack<string> toassign; // variable names yet to be assigned
+    bool in_expression = false; // track if we're inside (>^o^)> ... (^o^<)
     // cout << "Initial todo" << endl;
     // PrintStack(todo);
     // cout << endl;
@@ -348,6 +349,10 @@ void run_code(
         // cout << "Current todo: ";
         // PrintStack(temp);
         // cout << endl;
+
+        // cout << "variables: ";
+        // PrintMap(variables);
+        // cout << endl;
         if (holds_alternative<shared_ptr<LoopBody>>(*it)){
             auto loop = get<shared_ptr<LoopBody>>(*it);
             // cout << "Loop condition: " << loop->condition[0] << " " << loop->condition[1] << " " << loop->condition[2] << endl;
@@ -357,19 +362,27 @@ void run_code(
                 run_code(loop->body, variables, todo); // Recursively execute loop body
             }
         }else if (holds_alternative<string>(*it)){
-
-            // assign variables: open-bracket variable assignment-operator value close-bracket
+            // assign variables
             if (holds_alternative<shared_ptr<LoopBody>>(*it)){
                 auto loop_body = get<shared_ptr<LoopBody>>(*it);
                 run_code(loop_body->body, variables, loop_body->stack);
             }else if (holds_alternative<string>(*it) && get<string>(*it) == "(>^o^)>"){
-                if (!todo.empty())
-                    todo.pop();
+                in_expression = true;
+                continue;
             }else if (holds_alternative<string>(*it) && get<string>(*it) == "(^o^<)"){ //(^o^<)
-                // end process
-                if (!todo.empty())
-                {
-                    todo.pop();
+                in_expression = false;
+                if(!toassign.empty()){
+                    string name = toassign.top(); toassign.pop();
+                    if (todo.empty()){
+                        cerr << "Error: No value to assign to variable " << name << endl;
+                        return;
+                    }
+                    string valueStr = todo.top(); todo.pop();
+                    if(is_number(valueStr)){
+                        variables[name] = stoi(valueStr);
+                    }else{
+                        variables[name] = valueStr;
+                    }
                 }
             }else if (holds_alternative<string>(*it) && get<string>(*it) == "UwU"){ //( ͡° ͜ʖ ͡°)
                 if (todo.empty()){
@@ -412,8 +425,8 @@ void run_code(
             {
                 if (todo.size() < 2)
                 {
-                    cerr << "Error: Stack underflow on (ㆆ _ ㆆ)" << endl;
-                    return;
+                    cerr << "Error: Stack underflow on -.-" << endl;
+                    exit(1);
                 }
                 string a = todo.top();
                 todo.pop();
@@ -435,7 +448,14 @@ void run_code(
             }
             else
             {
-                if (!toassign.empty())
+                // Check if this is a simple assignment (not in expression)
+                bool simple_assign = !toassign.empty() && !in_expression &&
+                                    (it + 1 == tokens.end() || 
+                                     !holds_alternative<string>(*(it+1)) ||
+                                     (get<string>(*(it+1)) != "(>^o^)>" && 
+                                      get<string>(*(it+1)) != ":["));
+                
+                if (simple_assign)
                 {
                     string name = toassign.top();
                     toassign.pop();
