@@ -21,46 +21,49 @@ This README is a concise language reference (formatted like a wiki page) with to
 ### Operations (tokens)
 
 Assignment / Equality
-
-```
-¯\_(ツ)_/¯
-```
-
 Assigns the value on the right to the variable on the left.
+
+```
+:[
+```
 
 Example:
 
 ```lennylang
-x ¯\_(ツ)_/¯ 5
+x :[ ~hello~
+a :[ 2
+a :[ (>^o^)> a - 1 (^o^<)
 ```
 
 Addition
 
 ```
-('_')┏oo┓('_')
++_+
 ```
 
 Example:
 
 ```lennylang
-a ¯\_(ツ)_/¯ 3 ('_')┏oo┓('_') 4
+a :[ 6 7 +_+    // assigns 13 to a
+~a~ ~b~ +_+ UwU     // prints the string ab
 ```
 
 Subtraction
 
 ```
-(ㆆ _ ㆆ)
+-_-
 ```
 
 Example:
 
 ```lennylang
-b ¯\_(ツ)_/¯ 10 (ㆆ _ ㆆ) 2
+b :[ 10 2 -_-
+b UwU    // prints 8
 ```
 
 ### Brackets
 
-Used to group expressions.
+Brackets can be used to temporarily group a set of tokens so that they are processed together, instead of being immediately processed/used.
 
 Opening bracket:
 
@@ -74,10 +77,11 @@ Closing bracket:
 (^o^<)
 ```
 
-Example grouping:
+Example:
+In this example below, the sum of 3 and 4 are assigned to the variable x. If there were no brackets, 3 would be immediately assigned to x, and 4 would be processed before the add operation, resulting in a stack underflow error.
 
 ```lennylang
-x ¯\_(ツ)_/¯ (>^o^)> 3 ('_')┏oo┓('_') 4 (^o^<)
+x :[ (>^o^)> 3 4 +_+ (^o^<)
 ```
 
 ### Input
