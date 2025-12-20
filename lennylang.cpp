@@ -15,12 +15,39 @@ using Value = std::variant<int, double, std::string>;
 
 static std::map<std::string, Value> globals;
 
-struct LoopBody
-{
+struct LoopBody;
+struct IfElseBody;
+
+struct LoopBody{
     std::vector<std::string> condition;
     std::stack<std::string> stack;
-    std::vector<std::variant<std::string, std::shared_ptr<LoopBody>>> body;
+    std::vector<std::variant<std::string, std::shared_ptr<LoopBody>, std::shared_ptr<IfElseBody>>> body;
 };
+
+struct IfElseBody{
+    std::vector<std::string> condition;
+    std::vector<std::variant<std::string, std::shared_ptr<LoopBody>, std::shared_ptr<IfElseBody>>> if_body;
+    std::vector<std::variant<std::string, std::shared_ptr<LoopBody>, std::shared_ptr<IfElseBody>>> else_body;
+};
+
+static string remove_comments(const string &code)
+{
+    string result;
+    string line;
+    for (size_t i = 0; i < code.length(); ++i)
+    {
+        if (i + 6 <= code.length() && code.substr(i, 7) == "(^///^)"){
+            while (i < code.length() && code[i] != '\n'){
+                ++i;
+            }if (i < code.length() && code[i] == '\n'){
+                result += '\n';
+            }
+        }else{
+            result += code[i];
+        }
+    }
+    return result;
+}
 
 static string load(const string &path)
 {
@@ -32,7 +59,7 @@ static string load(const string &path)
         exit(1);
     }
     string s((istreambuf_iterator<char>(f)), istreambuf_iterator<char>());
-    return s;
+    return remove_comments(s);
 }
 
 // for debugging
@@ -321,11 +348,9 @@ void assign(string var, const string& value, map<string, Value>& variables){
 
 }
 
-void run_code(
-    const vector<variant<string, shared_ptr<LoopBody>>> &tokens,
+void run_code(const vector<variant<string, shared_ptr<LoopBody>, shared_ptr<IfElseBody>>> &tokens,
     map<string, Value> &variables,
-    stack<string> &todo)
-{
+    stack<string> &todo){
 
     stack<string> toassign; // variable names yet to be assigned
     bool in_expression = false; // track if we're inside (>^o^)> ... (^o^<)
@@ -361,15 +386,19 @@ void run_code(
             while (evaluate_cond(loop->condition, variables)){
                 run_code(loop->body, variables, todo); // Recursively execute loop body
             }
+        }else if (holds_alternative<shared_ptr<IfElseBody>>(*it)){
+            auto ifelse = get<shared_ptr<IfElseBody>>(*it);
+            if (evaluate_cond(ifelse->condition, variables)){
+                run_code(ifelse->if_body, variables, todo);
+            }else{
+                run_code(ifelse->else_body, variables, todo);
+            }
         }else if (holds_alternative<string>(*it)){
             // assign variables
-            if (holds_alternative<shared_ptr<LoopBody>>(*it)){
-                auto loop_body = get<shared_ptr<LoopBody>>(*it);
-                run_code(loop_body->body, variables, loop_body->stack);
-            }else if (holds_alternative<string>(*it) && get<string>(*it) == "(>^o^)>"){
+            if (get<string>(*it) == "(>^o^)>"){
                 in_expression = true;
                 continue;
-            }else if (holds_alternative<string>(*it) && get<string>(*it) == "(^o^<)"){ //(^o^<)
+            }else if (get<string>(*it) == "(^o^<)"){ //(^o^<)
                 in_expression = false;
                 if(!toassign.empty()){
                     string name = toassign.top(); toassign.pop();
@@ -384,7 +413,7 @@ void run_code(
                         variables[name] = valueStr;
                     }
                 }
-            }else if (holds_alternative<string>(*it) && get<string>(*it) == "UwU"){ //( ͡° ͜ʖ ͡°)
+            }else if (get<string>(*it) == "UwU"){ //( ͡° ͜ʖ ͡°)
                 if (todo.empty()){
                     cerr << "Error: Stack underflow on UwU" << endl;
                     return;
@@ -400,14 +429,10 @@ void run_code(
                     }else if (std::holds_alternative<std::string>(v)){
                         output(std::get<std::string>(v));
                     }
-                }
-                else
-                {
+                }else{
                     output(val);
                 }
-            }
-            else if (holds_alternative<string>(*it) && get<string>(*it) == "+_+")
-            { //('_')┏oo┓('_')
+            }else if (get<string>(*it) == "+_+"){ //('_')┏oo┓('_')
                 // addition
                 if (todo.size() < 2)
                 {
@@ -420,9 +445,7 @@ void run_code(
                 todo.pop();
                 string result = add_two(a, b, variables);
                 todo.push(result);
-            }
-            else if (holds_alternative<string>(*it) && get<string>(*it) == "-.-")
-            {
+            }else if (get<string>(*it) == "-.-"){
                 if (todo.size() < 2)
                 {
                     cerr << "Error: Stack underflow on -.-" << endl;
@@ -434,20 +457,30 @@ void run_code(
                 todo.pop();
                 string result = subtract_two(b, a, variables);
                 todo.push(result);
-            }
-            else if (holds_alternative<string>(*it) && get<string>(*it) == ":[")
-            {
+            }else if (get<string>(*it) == ":["){
                 // variable assignment
-                if (todo.size() < 1)
-                {
+                if (todo.size() < 1){
                     cerr << "Error: No variable specified for assignment" << endl;
                     return;
                 }
                 toassign.push(todo.top());
                 todo.pop();
-            }
-            else
-            {
+            } else if (get<string>(*it) == "(>)_(<)"){
+                // input
+                string inp;
+                cin >> inp;
+                if (!toassign.empty()){
+                    string name = toassign.top();
+                    toassign.pop();
+                    if (is_number(inp)){
+                        variables[name] = stoi(inp);
+                    }else{
+                        variables[name] = inp;
+                    }
+                } else {
+                    todo.push(inp);
+                }
+            }else{
                 // Check if this is a simple assignment (not in expression)
                 bool simple_assign = !toassign.empty() && !in_expression &&
                                     (it + 1 == tokens.end() || 
@@ -455,15 +488,12 @@ void run_code(
                                      (get<string>(*(it+1)) != "(>^o^)>" && 
                                       get<string>(*(it+1)) != ":["));
                 
-                if (simple_assign)
-                {
+                if (simple_assign){
                     string name = toassign.top();
                     toassign.pop();
                     string valueStr = get<string>(*it);
-                    if (is_number(valueStr))
-                        variables[name] = stoi(valueStr);
-                    else
-                        variables[name] = valueStr;
+                    if (is_number(valueStr)) variables[name] = stoi(valueStr);
+                    else variables[name] = valueStr;
                 } else {                   
                     todo.push(get<string>(*it));
                     
@@ -473,16 +503,11 @@ void run_code(
                     get<string>(*(it+1)) == ":[") &&  // check if next token is assignment operator
                     variables.find(get<string>(*it)) != variables.end()) {
                         Value val = variables[get<string>(*it)];
-                        if (std::holds_alternative<int>(val))
-                        {
+                        if (std::holds_alternative<int>(val)){
                             todo.push(std::to_string(std::get<int>(val)));
-                        }
-                        else if (std::holds_alternative<double>(val))
-                        {
+                        }else if (std::holds_alternative<double>(val)){
                             todo.push(std::to_string(std::get<double>(val)));
-                        }
-                        else if (std::holds_alternative<std::string>(val))
-                        {
+                        }else if (std::holds_alternative<std::string>(val)){
                             todo.push(std::get<std::string>(val));
                         }
                     }
@@ -492,10 +517,10 @@ void run_code(
     }
 }
 
-vector<variant<string, shared_ptr<LoopBody>>> parse_tokens(
+vector<variant<string, shared_ptr<LoopBody>, shared_ptr<IfElseBody>>> parse_tokens(
     const vector<string> &tokens, int &i)
 {
-    vector<variant<string, shared_ptr<LoopBody>>> result;
+    vector<variant<string, shared_ptr<LoopBody>, shared_ptr<IfElseBody>>> result;
 
     while (i < tokens.size())
     {
@@ -528,14 +553,10 @@ vector<variant<string, shared_ptr<LoopBody>>> parse_tokens(
             loop->condition = cond;
             loop->body = parse_tokens(tokens, i); // Recursive call
             result.push_back(loop);
-        }
-        else if (tokens[i] == ">:3")
-        {
+        }else if (tokens[i] == ">:3"){
             ++i;
             break;
-        }
-        else
-        {
+        }else{
             result.push_back(tokens[i]);
             ++i;
         }
@@ -543,7 +564,7 @@ vector<variant<string, shared_ptr<LoopBody>>> parse_tokens(
     return result;
 }
 
-void PrintLoopBody(vector<variant<string, shared_ptr<LoopBody>>> &body, int indent = 0)
+void PrintLoopBody(vector<variant<string, shared_ptr<LoopBody>, shared_ptr<IfElseBody>>> &body, int indent = 0)
 {
     string indentStr(indent, ' ');
     for (const auto &token : body)
@@ -552,7 +573,7 @@ void PrintLoopBody(vector<variant<string, shared_ptr<LoopBody>>> &body, int inde
         {
             cout << indentStr << "Token: " << get<string>(token) << endl;
         }
-        else
+        else if (holds_alternative<shared_ptr<LoopBody>>(token))
         {
             auto loop = get<shared_ptr<LoopBody>>(token);
             cout << indentStr << "Loop Condition: ";
@@ -563,6 +584,20 @@ void PrintLoopBody(vector<variant<string, shared_ptr<LoopBody>>> &body, int inde
             cout << endl;
             cout << indentStr << "Loop Body:" << endl;
             PrintLoopBody(loop->body, indent + 4);
+        }
+        else if (holds_alternative<shared_ptr<IfElseBody>>(token))
+        {
+            auto ifelse = get<shared_ptr<IfElseBody>>(token);
+            cout << indentStr << "If Condition: ";
+            for (const auto &condToken : ifelse->condition)
+            {
+                cout << condToken << " ";
+            }
+            cout << endl;
+            cout << indentStr << "If Body:" << endl;
+            PrintLoopBody(ifelse->if_body, indent + 4);
+            cout << indentStr << "Else Body:" << endl;
+            PrintLoopBody(ifelse->else_body, indent + 4);
         }
     }
 }
@@ -616,7 +651,7 @@ int main(int argc, char **argv)
     int i = 0;
     LoopBody loop_body;
     // LoopBody code_body = parse_loop(loop_body, tokens, i, false, {});
-    vector<variant<string, shared_ptr<LoopBody>>> code_body = parse_tokens(tokens, i);
+    vector<variant<string, shared_ptr<LoopBody>, shared_ptr<IfElseBody>>> code_body = parse_tokens(tokens, i);
     // for debuggin: print loop body
     // for (const auto &t : code_body)
     // {
