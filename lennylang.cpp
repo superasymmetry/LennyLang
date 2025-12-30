@@ -63,6 +63,50 @@ static string load(const string &path)
 }
 
 // for debugging
+void PrintTokens(const vector<variant<string, shared_ptr<LoopBody>, shared_ptr<IfElseBody>>>& tokens,
+                 int indent = 0)
+{
+    string pad(indent, ' ');
+
+    for (const auto& t : tokens)
+    {
+        if (holds_alternative<string>(t))
+        {
+            cout << pad << "Token: " << get<string>(t) << '\n';
+        }
+        else if (holds_alternative<shared_ptr<LoopBody>>(t))
+        {
+            auto loop = get<shared_ptr<LoopBody>>(t);
+            cout << pad << "LOOP cond: ";
+            for (auto& c : loop->condition) cout << c << ' ';
+            cout << '\n';
+            cout << pad << "LOOP body:\n";
+            PrintTokens(loop->body, indent + 2);
+        }
+        else if (holds_alternative<shared_ptr<IfElseBody>>(t))
+        {
+            auto ifelse = get<shared_ptr<IfElseBody>>(t);
+            cout << pad << "IF cond: ";
+            for (auto& c : ifelse->condition) cout << c << ' ';
+            cout << '\n';
+
+            cout << pad << "IF body:\n";
+            PrintTokens(ifelse->if_body, indent + 2);
+
+            cout << pad << "ELSE body:\n";
+            PrintTokens(ifelse->else_body, indent + 2);
+        }
+    }
+}
+
+void PrintVector(const vector<string> &v)
+{
+    for (const auto &s : v){
+        std::cout << s << " ";
+    }
+    std::cout << std::endl;
+}
+
 void PrintStack(stack<string> s)
 {
     // used for debugging
@@ -314,6 +358,7 @@ bool evaluate_cond(const std::vector<std::string> &condition, map<string, Value>
 {
     if (condition.size() != 3)
     {
+        PrintVector(condition);
         cerr << "Error: Invalid condition format." << endl;
         exit(1);
     }
@@ -360,24 +405,23 @@ void run_code(const vector<variant<string, shared_ptr<LoopBody>, shared_ptr<IfEl
     for (auto it = tokens.begin(); it != tokens.end(); ++it)
     {
         // debug
-        // cout << "Token: [";
-        // if (holds_alternative<string>(*it))
-        // {
-        //     cout << get<string>(*it);
-        // }
-        // else
-        // {
-        //     cout << "(loop)";
-        // }
-        // cout << "] Hex: ";
-        // stack<string> temp = todo;
-        // cout << "Current todo: ";
-        // PrintStack(temp);
-        // cout << endl;
-
-        // cout << "variables: ";
-        // PrintMap(variables);
-        // cout << endl;
+        cout << "Token: [";
+        if (holds_alternative<string>(*it))
+        {
+            cout << get<string>(*it);
+        }
+        else
+        {
+            cout << "(loop)";
+        }
+        cout << "] Hex: ";
+        stack<string> temp = todo;
+        cout << "Current todo: ";
+        PrintStack(temp);
+        cout << endl;
+        cout << "variables: ";
+        PrintMap(variables);
+        cout << endl;
         if (holds_alternative<shared_ptr<LoopBody>>(*it)){
             auto loop = get<shared_ptr<LoopBody>>(*it);
             // cout << "Loop condition: " << loop->condition[0] << " " << loop->condition[1] << " " << loop->condition[2] << endl;
@@ -556,7 +600,39 @@ vector<variant<string, shared_ptr<LoopBody>, shared_ptr<IfElseBody>>> parse_toke
         }else if (tokens[i] == ">:3"){
             ++i;
             break;
-        }else{
+        } else if (tokens[i] == ">.<") {
+            // if statement
+            // Parse condition
+            ++i;
+            if (i >= tokens.size() || tokens[i] != "(>^o^)>") {
+                cerr << "Error: Expected (>^o^)> after >.<" << endl;
+                exit(1);
+            }
+            ++i;
+            vector<string> cond;
+            while (i < tokens.size() && tokens[i] != "(^o^<)")
+            {
+                cond.push_back(tokens[i]);
+                ++i;
+            }
+            if (i >= tokens.size())
+            {
+                cerr << "Error: Expected (^o^<) to end loop condition" << endl;
+                exit(1);
+            }
+            ++i; // skip (^o^<)
+            auto ifelse = make_shared<IfElseBody>();
+            ifelse->condition = cond;
+            ifelse->if_body = parse_tokens(tokens, i);
+            if (i < tokens.size() && tokens[i] == ">_<") {
+                ++i; // skip else token
+                ifelse->else_body = parse_tokens(tokens, i);
+            }
+            result.push_back(ifelse);
+        } else if (tokens[i] == ">_<") {
+            // else statement
+            break;
+        }else {
             result.push_back(tokens[i]);
             ++i;
         }
