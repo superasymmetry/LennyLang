@@ -219,7 +219,7 @@ string add_two(string a, string b, map<string, Value> &variables)
     }
     else if (is_number(a) && is_number(b))
     {
-        int sum = stoi(a) + stoi(b);
+        float sum = stof(a) + stof(b);
         return to_string(sum);
     } 
     cerr << "Error: Addition requires both operands to be either numbers or strings." << endl;
@@ -240,7 +240,7 @@ string subtract_two(string a, string b, map<string, Value> &variables)
     }
     else if (is_number(a) && is_number(b))
     {
-        int diff = stoi(a) - stoi(b);
+        float diff = stof(a) - stof(b);
         return to_string(diff);
     }else{
         cerr << "Error: Subtraction requires numeric operands." << endl;
@@ -261,7 +261,7 @@ string multiply_two(string a, string b, map<string, Value> &variables)
     }
     else if (is_number(a) && is_number(b))
     {
-        int prod = stoi(a) * stoi(b);
+        float prod = stof(a) * stof(b);
         return to_string(prod);
     }
     cerr << "Error: Multiplication requires numeric operands." << endl;
@@ -285,7 +285,7 @@ string divide_two(string a, string b, map<string, Value> &variables)
             cerr << "Error: Division by zero." << endl;
             exit(1);
         }
-        int quot = stoi(a) / stoi(b);
+        float quot = static_cast<float>(stoi(a)) / static_cast<float>(stoi(b));
         return to_string(quot);
     }
     cerr << "Error: Division requires numeric operands." << endl;
@@ -405,23 +405,23 @@ void run_code(const vector<variant<string, shared_ptr<LoopBody>, shared_ptr<IfEl
     for (auto it = tokens.begin(); it != tokens.end(); ++it)
     {
         // debug
-        cout << "Token: [";
-        if (holds_alternative<string>(*it))
-        {
-            cout << get<string>(*it);
-        }
-        else
-        {
-            cout << "(loop)";
-        }
-        cout << "] Hex: ";
-        stack<string> temp = todo;
-        cout << "Current todo: ";
-        PrintStack(temp);
-        cout << endl;
-        cout << "variables: ";
-        PrintMap(variables);
-        cout << endl;
+        // cout << "Token: [";
+        // if (holds_alternative<string>(*it))
+        // {
+        //     cout << get<string>(*it);
+        // }
+        // else
+        // {
+        //     cout << "(loop)";
+        // }
+        // cout << "] Hex: ";
+        // stack<string> temp = todo;
+        // cout << "Current todo: ";
+        // PrintStack(temp);
+        // cout << endl;
+        // cout << "variables: ";
+        // PrintMap(variables);
+        // cout << endl;
         if (holds_alternative<shared_ptr<LoopBody>>(*it)){
             auto loop = get<shared_ptr<LoopBody>>(*it);
             // cout << "Loop condition: " << loop->condition[0] << " " << loop->condition[1] << " " << loop->condition[2] << endl;
@@ -500,6 +500,30 @@ void run_code(const vector<variant<string, shared_ptr<LoopBody>, shared_ptr<IfEl
                 string b = todo.top();
                 todo.pop();
                 string result = subtract_two(b, a, variables);
+                todo.push(result);
+            }else if (get<string>(*it) == "*_*"){
+                if (todo.size() < 2)
+                {
+                    cerr << "Error: Stack underflow on *_*" << endl;
+                    exit(1);
+                }
+                string a = todo.top();
+                todo.pop();
+                string b = todo.top();
+                todo.pop();
+                string result = multiply_two(b, a, variables);
+                todo.push(result);
+            }else if (get<string>(*it) == "/\\_/\\"){
+                if (todo.size() < 2)    
+                {
+                    cerr << "Error: Stack underflow on /\\_/\\" << endl;
+                    exit(1);
+                }
+                string a = todo.top();
+                todo.pop();
+                string b = todo.top();
+                todo.pop();
+                string result = divide_two(b, a, variables);
                 todo.push(result);
             }else if (get<string>(*it) == ":["){
                 // variable assignment
@@ -728,7 +752,7 @@ int main(int argc, char **argv)
     LoopBody loop_body;
     // LoopBody code_body = parse_loop(loop_body, tokens, i, false, {});
     vector<variant<string, shared_ptr<LoopBody>, shared_ptr<IfElseBody>>> code_body = parse_tokens(tokens, i);
-    // for debuggin: print loop body
+    // for debugging: print loop body
     // for (const auto &t : code_body)
     // {
     //     if (holds_alternative<shared_ptr<LoopBody>>(t))
