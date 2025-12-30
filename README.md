@@ -63,7 +63,7 @@ b UwU    // prints 8
 
 ### Brackets
 
-Brackets can be used to temporarily group a set of tokens so that they are processed together, instead of being immediately processed/used.
+Brackets can be used to form an expression by temporarily grouping a set of tokens so that they are processed together, instead of being immediately processed/used.
 
 Opening bracket:
 
@@ -86,157 +86,139 @@ x :[ (>^o^)> 3 4 +_+ (^o^<)
 
 ### Input
 
-Reads an integer from the user.
-
-Syntax:
+One can get a value from the input by using the following token.
 
 ```lennylang
-( ━☞´◔‿ゝ◔`)━☞ (>^o^)> variable <(^o^<)
+(>)_(<)
+```
+To assign the input value to a variable, use the variable assignment operator followed by the input command. In the example below, we can assign the variable _name_ to a value we obtain from the input.
+
+```lennylang
+name :[ (>)_(<)
 ```
 
-Example:
+### Variable Assignment
 
-```lennylang
-( ━☞´◔‿ゝ◔`)━☞ (>^o^)> n <(^o^<)
+One can assign a value to a variable by using the assignment operator, ''':['''. LennyLang will automatically parse the data type of the value, so no data type declaration is needed. One can assign all values with simply the operator, as shown in the example.
+
+```
+a :[ 1    // for integer value
+b :[ 2.045    // for double value
+c :[ ~lennylang is the best!~    // for string value
 ```
 
 ### Output
 
-Prints the value of an expression.
-
-Syntax:
+For the kernel to write an output, one can use the following token.
 
 ```lennylang
-╾━╤デ╦︻(▀̿Ĺ̯▀̿ ̿) (>^o^)> expression <(^o^<)
+UwU
 ```
-
-Example:
+The standard syntax is to put the value/variable before the output token, separated by a space. For example, 
 
 ```lennylang
-╾━╤デ╦︻(▀̿Ĺ̯▀̿ ̿) (>^o^)> x <(^o^<)
+1 UwU
 ```
-
-### Variable Declaration
-
-Declares a variable and initializes it to 0.
-
-Syntax:
+outputs 1, and 
 
 ```lennylang
-╰( ⁰ ਊ ⁰ )━☆ﾟ.*･｡ﾟ (>^o^)> variable <(^o^<)
+val :[ ~hello world~
+val UwU
 ```
-
-Example:
-
-```lennylang
-╰( ⁰ ਊ ⁰ )━☆ﾟ.*･｡ﾟ (>^o^)> count <(^o^<)
-```
+outputs hello world.
 
 ## Control Flow
 
 ### While Loops
 
-Syntax:
+While loops allow you to repeatedly execute a block of code as long as a condition is true. The loop begins with `OwO` followed by a condition in brackets, and ends with `>:3`.
 
-```lennylang
-¯\_( ͡° ͜ʖ ͡°)_/¯ (>^o^)> condition <(^o^<) (｡☉౪ ⊙｡) body (>^o^)><(^o^<)
+Loop start:
+```
+OwO
 ```
 
-The body executes while the condition is nonzero.
+Loop end:
+```
+>:3
+```
+
+The condition must be enclosed in brackets `(>^o^)>` and `(^o^<)`, and can use the following comparison operators:
+- `==` (equality)
+- `>` (greater than)
+- `<` (less than)
 
 Example:
 
 ```lennylang
-¯\_( ͡° ͜ʖ ͡°)_/¯ (>^o^)> x <(^o^<)
-(｡☉౪ ⊙｡)
-    x ¯\_(ツ)_/¯ x (ㆆ _ ㆆ) 1
-(>^o^)><(^o^<)
+i :[ 0
+OwO (>^o^)> i < 5 (^o^<)
+    i UwU
+    i :[ (>^o^)> i 1 +_+ (^o^<)
+>:3
 ```
 
-### If / Else If / Else
+This loop prints the numbers 0 through 4. It continues while `i` is less than 5, incrementing `i` by 1 each iteration.
 
-If token:
+Another example with string comparison:
 
+```lennylang
+answer :[ ~no~
+OwO (>^o^)> answer == ~no~ (^o^<)
+    ~Enter yes to continue: ~ UwU
+    answer :[ (>)_(<)
+>:3
+```
+
+This loop continues asking for input until the user enters "yes".
+
+### If-Else Branching
+
+If-else statements allow conditional execution of code blocks based on whether a condition is true or false.
+
+If statement start:
 ```
 ( ͡° ͜ʖ ͡°)
 ```
 
-Else-if token:
-
+Else statement:
 ```
-( ͡~ ͜ʖ ͡°)
+( ͡° ʖ̯ ͡°)
 ```
 
-Else token:
-
+If-else end:
 ```
 ಠ_ಠ
 ```
 
+The condition must be enclosed in brackets `(>^o^)>` and `(^o^<)`, and can use the following comparison operators:
+- `==` (equality)
+- `>` (greater than)
+- `<` (less than)
+
 Example:
 
 ```lennylang
-( ͡° ͜ʖ ͡°) (>^o^)> x <(^o^<)
-    ╾━╤デ╦︻(▀̿Ĺ̯▀̿ ̿) (>^o^)> 1 <(^o^<)
-
-( ͡~ ͜ʖ ͡°) (>^o^)> x (ㆆ _ ㆆ) 5 <(^o^<)
-    ╾━╤デ╦︻(▀̿Ĺ̯▀̿ ̿) (>^o^)> 2 <(^o^<)
-
+age :[ 18
+( ͡° ͜ʖ ͡°) (>^o^)> age > 17 (^o^<)
+    ~You are an adult~ UwU
+( ͡° ʖ̯ ͡°)
+    ~You are a minor~ UwU
 ಠ_ಠ
-    ╾━╤デ╦︻(▀̿Ĺ̯▀̿ ̿) (>^o^)> 3 <(^o^<)
 ```
 
-## Arrays
+This checks if `age` is greater than 17. If true, it prints "You are an adult", otherwise it prints "You are a minor".
 
-Create an array (length):
+Another example with equality:
 
 ```lennylang
-┬──┬ ノ( ゜-゜ノ) (>^o^)> length <(^o^<)
+password :[ (>)_(<)
+( ͡° ͜ʖ ͡°) (>^o^)> password == ~secret~ (^o^<)
+    ~Access granted~ UwU
+( ͡° ʖ̯ ͡°)
+    ~Access denied~ UwU
+ಠ_ಠ
 ```
-
-Creates an array of the given length, filled with 0.
-
-Example:
-
-```lennylang
-arr ¯\_(ツ)_/¯ ┬──┬ ノ( ゜-゜ノ) (>^o^)> 5 <(^o^<)
-```
-
-Modify an array element (set/remove):
-
-```lennylang
-(ノಠ益ಠ)ノ彡┻━┻ (>^o^)> index <(^o^<) (>^o^)> value <(^o^<)
-```
-
-Example:
-
-```lennylang
-arr (ノಠ益ಠ)ノ彡┻━┻ (>^o^)> 2 <(^o^<) (>^o^)> 99 <(^o^<)
-```
-
-## Full Example Program
-
-Program: Sum of first N integers
-
-```lennylang
-╰( ⁰ ਊ ⁰ )━☆ﾟ.*･｡ﾟ (>^o^)> n <(^o^<)
-╰( ⁰ ਊ ⁰ )━☆ﾟ.*･｡ﾟ (>^o^)> sum <(^o^<)
-
-( ━☞´◔‿ゝ◔`)━☞ (>^o^)> n <(^o^<)
-
-¯\_( ͡° ͜ʖ ͡°)_/¯ (>^o^)> n <(^o^<)
-(｡☉౪ ⊙｡)
-    sum ¯\_(ツ)_/¯ sum ('_')┏oo┓('_') n
-    n ¯\_(ツ)_/¯ n (ㆆ _ ㆆ) 1
-(>^o^)><(^o^<)
-
-╾━╤デ╦︻(▀̿Ĺ̯▀̿ ̿) (>^o^)> sum <(^o^<)
-```
-
-## Notes
-
-- Use consistent bracket tokens for grouping: `>^o^)>` and `<(^o^<`.
-- Keep expressions simple while composing complex logic.
 
 ## License
 
